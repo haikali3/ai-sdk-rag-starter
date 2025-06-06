@@ -1,4 +1,5 @@
 import { createResource } from '@/lib/actions/resources';
+import { findRelevantContent } from '@/lib/ai/embedding';
 import { openai } from '@ai-sdk/openai';
 import { streamText, tool } from 'ai';
 import { z } from 'zod';
@@ -14,11 +15,6 @@ export async function POST(req: Request) {
     system: `You are a helpful assistant. Check your knowledge base before answering any questions.
     Only respond to questions using information from tool calls.
     if no relevant information is found in the tool calls, respond, "Sorry, I don't know."
-    You have access to the following tools:
-    - search: search the knowledge base for information
-    - createResource: create a new resource
-    - updateResource: update an existing resource
-    - deleteResource: delete an existing resource
     `,
     messages,
     tools: {
@@ -32,6 +28,13 @@ export async function POST(req: Request) {
         }),
         execute: async ({ content }) => createResource({ content }),
       }),
+      getInformation: tool({
+        description: `get information from the knowledge base to answer questions.`,
+        parameters: z.object({
+          query: z.string().describe('the users question'),
+        }),
+        execute: async ({ query }) => findRelevantContent(query),
+      })
     },
   });
 
